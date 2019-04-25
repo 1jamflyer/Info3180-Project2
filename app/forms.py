@@ -9,7 +9,6 @@ class RegForm(FlaskForm):
     lname = StringField('Last Name',validators=[DataRequired()])
     username = StringField('Username', validators=[DataRequired()])
     password = PasswordField('New Password', validators=[DataRequired()])
-    gender = SelectField('Gender',choices=[('male','Male'),('female','Female')])
     email = StringField('Email', validators=[DataRequired(),Email()])
     location = StringField('Location',validators=[DataRequired()])
     biography = TextAreaField('Biography',validators=[DataRequired()])

@@ -73,7 +73,7 @@ const Home = Vue.component('home', {
     }
 });
 
-const Register=Vue.component("register", {
+const Register = Vue.component("register", {
     template: `
         <div>
           <h3 class="card-header center text-muted">Register</h3>
@@ -261,10 +261,107 @@ const Logout = Vue.component("logout", {
 
 const Explore= Vue.component("explore", {
     template:`
-
-    `
+    <div class="row">
+        <div v-if="postFlag" class= "col-md-7" style="margin: 0 auto;">
+            <div class="card" style=" width:100%; padding: 0; margin-bottom: 5%" v-for="(post, index) in posts">
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item">
+                        <img id="pro-photo" v-bind:src=post.user_profile_photo style="width:40px"/>
+                        <router-link class="username" :to="{name: 'users', params: {user_id: post.user_id}}">{{ post.username }}</router-link>
+                    </li>
+                    <li class="list-group-item" style="padding: 0;">
+                        <img id="post-img" v-bind:src=post.photo style="width:100%" />
+                    </li>
+                    <li class="list-group-item text-muted">
+                        {{post.caption}}
+                        <div class="row" style="margin-top: 10%">
+                            <div id="likes" class="col-md-6" style="text-align: left;">
+                                <img class="like-ico liked" src="static/icons/liked.png"  v-on:click="like" style="width:20px; display: none;"/>
+                                <img class="like-ico like" src="static/icons/like.png"  v-on:click="like" style="width:20px;"/> {{post.likes}} Likes
+                                <input type="hidden" id="post-id"  v-bind:value="post.id" />
+                                <input type="hidden" id="post-index" v-bind:value="index" />
+                            </div>
+                            <div id="post-date" class="col-md-6" style="text-align: right">
+                                {{post.created_on}}
+                            </div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        <div v-else>
+            <div class="alert alert-primary" >
+                We Couldnt find any posts. Why not be the first user to post on our site.
+            </div>
+        </div>
+        <div class="col-md-3">
+            <router-link class="btn btn-primary" to="/posts/new" style="width:100%;">New Post</router-link>
+        </div>
+    </div>
+    `,
+    created: function(){
+    self = this;
+    
+    fetch("/api/posts", {
+      method: "GET",
+      headers:{
+        "Authorization": `Bearer ${JSON.parse(localStorage.current_user).token}`,
+        'X-CSRFToken': token
+      },
+      credentials: 'same-origin'
+    }).then(function(response){
+      return response.json();
+    }).then(function(jsonResponse){
+      if(jsonResponse.hasOwnProperty("posts")){
+        if(jsonResponse.posts.length !=0){
+          self.posts = jsonResponse.posts.reverse();
+          self.postFlag = true;
+        }
+      }
+    }).catch(function(error){
+        console.log(error);
+      });
+    },
+    methods: {
+    like: function(event){
+      self = this;
+      let node_list = event.target.parentElement.children;
+      let post_id = node_list[node_list.length-2].value;
+      let post_index = node_list[node_list.length-1].value;
+      
+      fetch(`/api/posts/${post_id}/like`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${JSON.parse(localStorage.current_user).token}`,
+          'X-CSRFToken': token,
+          'Content-Type': 'application/json'
+        },
+        credentials: "same-origin",
+        body: JSON.stringify({"user_id": JSON.parse(localStorage.current_user).id, "post_id": post_id})
+      }).then(function(response){
+        return response.json();
+      }).then(function(jsonResponse){
+        
+        if(jsonResponse.hasOwnProperty("status")){
+          if(jsonResponse.status == 201){
+            event.target.style.display="none"
+            event.target.previousElementSibling.style.display="";
+            self.posts[post_index].likes = jsonResponse.likes;
+          }
+        }
+      }).catch(function(error){
+        console.log(error);
+      });
+    }
+  },
+  data: function(){
+    return {
+      posts: [],
+      postFlag: false
+      }
+    }
 });
-
+ 
 
 const NotFound = Vue.component('not-found', {
     template: `
@@ -279,13 +376,12 @@ const NotFound = Vue.component('not-found', {
 
 // Define Routes
 const router = new VueRouter({
-    mode: 'history',
     routes: [
         {path: "/", component: Home},
-        {path: "/register", component: register},
-        {path: "/login", component: login},
-        {path: "explore", component:explore},
-        {path: "/logout", component: logout},
+        {path: "/register", component: Register},
+        {path: "/login", component: Login},
+        {path: "/explore", component: Explore},
+        {path: "/logout", component: Logout},
         // Put other routes here
 
         // This is a catch all route in case none of the above matches

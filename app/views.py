@@ -9,39 +9,27 @@ This file creates your application.
 import os
 import datetime
 from app import app,db,login_manager
-from flask import render_template, request, secure_filename, url_for, redirect
+from flask import render_template, request, url_for, redirect
 from flask_login import login_user, logout_user, current_user, login_required
 from werkzeug.security import check_password_hash
-import jwt
+from werkzeug.utils import secure_filename
 from functools import wraps
 
 #Form Imports
-from forms import *
+from .forms import *
 # Model Imports
-from models import *
+from .models import *
 
 ###
 # Routing for your application.
 ###
 
 
-# Please create all new routes and view functions above this route.
-# This route is now our catch all route for our VueJS single page
-# application.
+
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
 def index(path):
-    """
-    Because we use HTML5 history mode in vue-router we need to configure our
-    web server to redirect all routes to index.html. Hence the additional route
-    "/<path:path".
-
-    Also we will render the initial webpage and then let VueJS take control.
-    """
     return render_template('index.html')
-
-
-
 
 
 
@@ -75,7 +63,7 @@ def registration():
     return redirect(url_for('registration'))
     
 #Login
-@app.route('api/auth/login', methods=['POST'])
+@app.route('/api/auth/login', methods=['POST'])
 def login():
     if current_user.is_authenticated:
         return redirect(url_for('secure_page'))
@@ -88,7 +76,7 @@ def login():
             login_user(user)
         return render_template('home.html')
     
-@app.route('api/auth/logout', methods=['GET'])
+@app.route('/api/auth/logout', methods=['GET'])
 @login_required
 def logout():
     logout_user()
