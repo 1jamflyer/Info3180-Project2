@@ -86,12 +86,11 @@ def logout():
 
 @app.route('/api/users/<user_id>/posts', methods =['GET','POST'])
 def singpost(user_id):
+    print(user_id)
     if request.method == 'GET':
         posts = Post.query.filter_by(user_id = user_id).all()
-        if posts is None:
-            return redirect(url_for('home'))
-        user = UserProfile.query.filter_by(user_id = uid).first()
-        followers = len(Follows.query.filter_by(user_id=uid).all())
+        user = UserProfile.query.filter_by(user_id = user_id).first()
+        followers = len(Follows.query.filter_by(user_id=user_id).all())
         response = {"postinfo": { "firstname": user.first_name, "lastname": user.last_name, "location" :user.location, "datejoined": user.date_joined,"biography": user.biography,"profilepic":os.path.join(app.config['PROFILE_PIC'], user.photograph ),"tposts": len(posts),"followers": followers, "images": []}}
         for i in posts:
             spost = {"id": i.post_id, "uid": i.user_id, "photo": os.path.join(app.config['POST_PIC'], i.photo) , "caption": i.caption, "pcreation": i.created_on}
@@ -119,7 +118,11 @@ def singpost(user_id):
 def follow(user_id):
     requests = request.get_json()
     result = Follows.query.filter_by(follower_id = requests['follower_id'],user_id = requests['user_id']).first()
-    follow = Follows(follower_id = request['follower_id'], user_id = request['user_id'])
+    if result is not None:
+        for follow in result:
+            if follow.user_id == user_id:
+                return jsonify(message="batty")
+    follow = Follows(follower_id = requests['follower_id'], user_id = requests['user_id'])
     db.session.add(follow)
     db.session.commit()
     return jsonify(message="Follow Successful")

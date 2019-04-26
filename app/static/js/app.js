@@ -242,7 +242,7 @@ const Login = Vue.component('login', {
 const Logout = Vue.component("logout", {
     template: `
         <div>
-        <div/>`,
+        </div>`,
     created: function(){
     const self = this;
     
@@ -268,7 +268,7 @@ const Explore= Vue.component("explore", {
                 <ul class="list-group list-group-flush">
                     <li class="list-group-item">
                         <img id="pro-photo" v-bind:src=post.profile_pic  style="width:40px"/>
-                        <router-link class="username" :to="{name: 'users', params: {user_id: post.user_id}}">{{ post.username }}</router-link>
+                        <router-link class="username" :to="{name: 'users', params: {user_id: post.uid}}">{{ post.username }}</router-link>
                     </li>
                     <li class="list-group-item" style="padding: 0;">
                         <img id="post-img" v-bind:src=post.pic style="width:100%" />
@@ -330,7 +330,7 @@ const Explore= Vue.component("explore", {
       let post_id = node_list[node_list.length-2].value;
       let post_index = node_list[node_list.length-1].value;
       
-      fetch("/api/posts/${post_id}/like", {
+      fetch(`/api/posts/${post_id}/like`, {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${JSON.parse(localStorage.current_user).token}`,
@@ -378,7 +378,7 @@ const Profile = Vue.component('profile',{
             <label>{{ user.lastname }}</label></strong>
             <div id="local" style="color: gray;">
               <label>{{ user.location }}</label><br>
-              <label>{{ user.date_joined }}</label>
+              <label>{{ user.datejoined }}</label>
             </div>
             <p id="bio" style="color: gray;">
               {{ user.biography }}
@@ -395,7 +395,7 @@ const Profile = Vue.component('profile',{
     </div>
     
     <div id="post-area" class="row" style="width:100%;">
-      <div class="profile-post col-md-4" style="margin-top:3%;" v-for="post in user.posts">
+      <div class="profile-post col-md-4" style="margin-top:3%;" v-for="post in user.images">
           <img v-bind:src=post.photo style="width: 100%;" />
       </div>
     </div>
@@ -404,8 +404,7 @@ const Profile = Vue.component('profile',{
     methods: {
     follow: function(){
       self = this;
-      
-      fetch("/api/users/{user_id}/follow",{
+      fetch(`/api/users/${self.$route.params.user_id}/follow`,{
         method: "POST",
         headers: {
           "Authorization": `Bearer ${JSON.parse(localStorage.current_user).token}`,
@@ -413,7 +412,7 @@ const Profile = Vue.component('profile',{
           'X-CSRFToken': token
         },
         credentials: 'same-origin',
-        body: JSON.stringify({"follower_id": JSON.parse(localStorage.current_user).id, "user_id": self.user_id})
+        body: JSON.stringify({"follower_id": JSON.parse(localStorage.current_user).id, "user_id": self.$route.params.user_id})
       })
       .then(function(response){
         return response.json();
@@ -435,7 +434,7 @@ const Profile = Vue.component('profile',{
   created: function(){
     self = this;
     
-    fetch("/api/users/${self.$route.params.user_id}/posts",{
+    fetch(`/api/users/${self.$route.params.user_id}/posts`,{
       method: "GET",
       headers: {
         "Authorization": `Bearer ${JSON.parse(localStorage.current_user).token}`
@@ -454,9 +453,8 @@ const Profile = Vue.component('profile',{
   },
   data: function(){
     return {
-      user: null,
-      cu_id: (this.$route.params.user_id == JSON.parse(localStorage.current_user).id) ? true : false
-    };
+      user: '',
+    }
   }
     
 });
@@ -561,7 +559,7 @@ const router = new VueRouter({
         {path: "/explore", component: Explore},
         {path: "/logout", component: Logout},
         {path: "/posts/new", component: NewPost},
-        { path: "/users/:user_id", name:"users",component: Profile},
+        {path: "/users/:user_id", name:"users",component: Profile},
         // Put other routes here
 
         // This is a catch all route in case none of the above matches
