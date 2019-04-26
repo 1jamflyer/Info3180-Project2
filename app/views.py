@@ -9,11 +9,12 @@ This file creates your application.
 import os
 import datetime
 from app import app,db,login_manager
-from flask import render_template, request, url_for, redirect
+from flask import render_template, request, url_for, redirect,jsonify
 from flask_login import login_user, logout_user, current_user, login_required
 from werkzeug.security import check_password_hash
 from werkzeug.utils import secure_filename
-from functools import wraps
+import jwt
+import random
 
 #Form Imports
 from .forms import *
@@ -34,10 +35,10 @@ def index(path):
 
 
 #Registration
-@app.route('/api/user/register',methods=['POST'])
-def registration():
+@app.route('/api/users/register',methods=['POST'])
+def register():
     form = RegForm()
-    if request.method == 'POST' and form.validate_on_submit():
+    if form.validate_on_submit():
         try:
             
             firstname = form.fname.data
@@ -47,69 +48,67 @@ def registration():
             location = form.location.data
             email = form.email.data
             biography = form.biography.data
-            photograph =  form.file.data
+            photograph = request.files['file']
             filename = secure_filename(photograph.filename)
-            photograph.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-            user_date = datetime.datetime.today().strftime('%Y-%m-%d')
-            user = UserProfile(username,password,firstname,lastname,location,biography,email,filename,user_date)
+            user_date = datetime.datetime.today()
+            photograph.save(os.path.join(app.config['PROFILE_PIC'], filename))
+            user = UserProfile(username=username, password=password, first_name=firstname, last_name=lastname, email=email, location=location, biography=biography, photograph=filename, date_joined=user_date)
             db.session.add(user)
             db.session.commit()
             
-            jsonify(message = "User successfully registered") 
-            return redirect(url_for('login'))
+            return jsonify(message = "User successfully registered") 
         except Exception as e:
             db.session.rollback()
             
-    return redirect(url_for('registration'))
+    return jsonify(errors=form_errors(form))
     
 #Login
 @app.route('/api/auth/login', methods=['POST'])
 def login():
-    if current_user.is_authenticated:
-        return redirect(url_for('secure_page'))
     form = LoginForm() 
     if request.method == 'POST' and form.validate_on_submit():
         username = form.username.data
         password = form.password.data
         user = UserProfile.query.filter_by(username=username).first()
-        if user is not None and check_password_hash(user.password, password):
-            login_user(user)
-        return render_template('home.html')
+        if user is not None and user.password == password:
+            payload = {'user': user.username}
+            encoded_jwt = jwt.encode(payload, 'secret',algorithm='HS256') 
+            response = {'token':'encoded_jwt', 'message': 'User successfully logged in',"user_id": user.user_id}
+            return jsonify(response)
+        return jsonify(errors="Username or password is incorrect")
+    return jsonify(errors=form_errors(form))
     
 @app.route('/api/auth/logout', methods=['GET'])
-@login_required
 def logout():
-    logout_user()
-    flash('You have been logged out.', 'danger')
-    return redirect(url_for('home'))
+    return jsonify(message= "User successfully logged out.")
+
 
 
 @app.route('/api/users/<user_id>/posts', methods =['GET','POST'])
-@login_required
-def singpost(uid):
+def singpost(user_id):
     if request.method == 'GET':
-        posts = post.query.filter_by(user_id = uid).all()
+        posts = Post.query.filter_by(user_id = user_id).all()
         if posts is None:
             return redirect(url_for('home'))
         user = UserProfile.query.filter_by(user_id = uid).first()
         followers = len(Follows.query.filter_by(user_id=uid).all())
-        response = {"postinfo": { "firstname": user.first_name, "lastname": user.last_name, "location" :user.location, "datejoined": user.date_joined,"biography": user.biography,"profilepic": "hold","tposts": len(posts),"followers": followers, "images": []}}
+        response = {"postinfo": { "firstname": user.first_name, "lastname": user.last_name, "location" :user.location, "datejoined": user.date_joined,"biography": user.biography,"profilepic":os.path.join(app.config['PROFILE_PIC'], user.photograph ),"tposts": len(posts),"followers": followers, "images": []}}
         for i in posts:
-            spost = {"id": i.post_id, "uid": i.user_id, "photo": "hold", "caption": i.caption, "pcreation": i.created_on}
+            spost = {"id": i.post_id, "uid": i.user_id, "photo": os.path.join(app.config['POST_PIC'], i.photo) , "caption": i.caption, "pcreation": i.created_on}
             response["postinfo"]["images"].append(spost)
         return jsonify(response)
     
     if request.method == 'POST':
-        filefolder = app.config['UPLOAD_FOLDER']
+        filefolder = app.config['POST_PIC']
         form = PostsForm()
         if form.validate_on_submit():
             uid = form.user_id.data
-            image = request.file['image']
+            image = request.files['image']
             caption = form.caption.data
-            user = UserProfile.query.filter_by(id=uid).first()
+            user = UserProfile.query.filter_by(user_id=uid).first()
             filename = secure_filename(image.filename)
-            creation = str(datetime.date.today())
-            post = Posts(user_id=uid,photo=filename,caption=caption ,created_on=creation)
+            creation = datetime.date.today()
+            post = Post(user_id=uid,photo=filename,caption=caption ,created_on=creation)
             image.save(os.path.join(filefolder, filename))
             db.session.add(post)
             db.session.commit()
@@ -117,34 +116,36 @@ def singpost(uid):
         return jsonify(errors=form_errors(form))
 
 @app.route('/api/users/<user_id>/follow', methods = ['POST'])
-@login_required
-def follow(uid):
-    request = request.get_json()
-    result = Follows.query.filter_by(follower_id = request['follower_id'],user_id = request['user_id']).first()
+def follow(user_id):
+    requests = request.get_json()
+    result = Follows.query.filter_by(follower_id = requests['follower_id'],user_id = requests['user_id']).first()
     follow = Follows(follower_id = request['follower_id'], user_id = request['user_id'])
     db.session.add(follow)
     db.session.commit()
     return jsonify(message="Follow Successful")
     
 @app.route('/api/posts', methods = ['GET'])
-@login_required
 def AllPosts():
-    Posts = Posts.query.all()
+    Posts = Post.query.all()
     tpost = []
     for i in Posts:
-        likes = len(Likes.query.filter_by(post_id=post.post_id).all())
-        spost = {"id": i.post_id, "uid": i.user_id, "photo": "hold", "caption": i.caption, "pcreation": i.created_on, "likes" : likes}
+        user = UserProfile.query.filter_by(user_id=i.user_id).first()
+        likes = len(Likes.query.filter_by(post_id=i.post_id).all())
+        spost = {"id": i.post_id, "uid": i.user_id, "username": user.username, "profile_pic": os.path.join(app.config['PROFILE_PIC'], user.photograph), "pic":os.path.join(app.config['POST_PIC'], i.photo ), "caption": i.caption, "pcreation": i.created_on, "likes" : likes}
         tpost.append(spost)
-    return jsonify(posts=tposts)
+    return jsonify(posts=tpost)
         
 @app.route('/api/posts/<post_id>/like',methods = ['POST'])
-@login_required
 def like(post_id):
-    request= request.get_json()
-    post_id = request["post_id"]
-    user_id = request["user_id"]
-    post = Posts.query.filter_by(id=post_id).first()
-    likes = Likes.query.filter_by(post_id=post_id).all()
+    requests= request.get_json()
+    post_id = requests["post_id"]
+    user_id = requests["user_id"]
+    postx = Post.query.filter_by(post_id=post_id).first()
+    likesx = Likes.query.filter_by(post_id=post_id).all()
+    if likesx is not None:
+        for like in likesx:
+            if like.user_id == user_id:
+                return jsonify(message="batty")
     added = Likes(user_id = user_id,post_id = post_id)
     db.session.add(added)
     db.session.commit()
@@ -172,7 +173,8 @@ def form_errors(form):
 
     return error_messages
 
-
+def strf_time(date, dateFormat):
+    return datetime.date(int(date.split('-')[0]),int(date.split('-')[1]),int(date.split('-')[2])).strftime(dateFormat)
 ###
 # The functions below should be applicable to all Flask apps.
 ###

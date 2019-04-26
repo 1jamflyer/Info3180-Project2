@@ -32,15 +32,15 @@ class UserProfile(db.Model):
     photograph = db.Column(db.String(500))
     date_joined = db.Column(db.Date())
 
-    def __init__(self, username,password,first_name, last_name, gender, location, biography, photograph, email, date_joined):
+    def __init__(self, username,password,first_name, last_name, location, biography, photograph, email, date_joined):
         self.username = username
         self.password = password
         self.first_name = first_name
         self.last_name = last_name
         self.location = location
         self.biography = biography
-        self.email = email
         self.photograph=photograph
+        self.email = email
         self.date_joined = date_joined
         
 class Likes(db.Model):
