@@ -50,7 +50,7 @@ def register():
             biography = form.biography.data
             photograph = request.files['file']
             filename = secure_filename(photograph.filename)
-            user_date = datetime.datetime.today()
+            user_date = datetime.datetime.today().strftime('%Y-%m-%d')
             photograph.save(os.path.join(app.config['PROFILE_PIC'], filename))
             user = UserProfile(username=username, password=password, first_name=firstname, last_name=lastname, email=email, location=location, biography=biography, photograph=filename, date_joined=user_date)
             db.session.add(user)
@@ -91,9 +91,9 @@ def singpost(user_id):
         posts = Post.query.filter_by(user_id = user_id).all()
         user = UserProfile.query.filter_by(user_id = user_id).first()
         followers = len(Follows.query.filter_by(user_id=user_id).all())
-        response = {"postinfo": { "firstname": user.first_name, "lastname": user.last_name, "location" :user.location, "datejoined": user.date_joined,"biography": user.biography,"profilepic":os.path.join(app.config['PROFILE_PIC'], user.photograph ),"tposts": len(posts),"followers": followers, "images": []}}
+        response = {"postinfo": { "firstname": user.first_name, "lastname": user.last_name, "location" :user.location, "datejoined": user.date_joined,"biography": user.biography,"profilepic":os.path.join(app.config['PROFILE_PICT'], user.photograph ),"tposts": len(posts),"followers": followers, "images": []}}
         for i in posts:
-            spost = {"id": i.post_id, "uid": i.user_id, "photo": os.path.join(app.config['POST_PIC'], i.photo) , "caption": i.caption, "pcreation": i.created_on}
+            spost = {"id": i.post_id, "uid": i.user_id, "photo": os.path.join(app.config['POST_PICT'], i.photo) , "caption": i.caption, "pcreation": i.created_on}
             response["postinfo"]["images"].append(spost)
         return jsonify(response)
     
@@ -106,7 +106,7 @@ def singpost(user_id):
             caption = form.caption.data
             user = UserProfile.query.filter_by(user_id=uid).first()
             filename = secure_filename(image.filename)
-            creation = datetime.date.today()
+            creation = datetime.date.today().strftime('%Y-%m-%d')
             post = Post(user_id=uid,photo=filename,caption=caption ,created_on=creation)
             image.save(os.path.join(filefolder, filename))
             db.session.add(post)
@@ -134,7 +134,7 @@ def AllPosts():
     for i in Posts:
         user = UserProfile.query.filter_by(user_id=i.user_id).first()
         likes = len(Likes.query.filter_by(post_id=i.post_id).all())
-        spost = {"id": i.post_id, "uid": i.user_id, "username": user.username, "profile_pic": os.path.join(app.config['PROFILE_PIC'], user.photograph), "pic":os.path.join(app.config['POST_PIC'], i.photo ), "caption": i.caption, "pcreation": i.created_on, "likes" : likes}
+        spost = {"id": i.post_id, "uid": i.user_id, "username": user.username, "profile_pic": os.path.join(app.config['PROFILE_PICT'], user.photograph), "pic":os.path.join(app.config['POST_PICT'], i.photo ), "caption": i.caption, "pcreation": i.created_on, "likes" : likes}
         tpost.append(spost)
     return jsonify(posts=tpost)
         
@@ -148,7 +148,7 @@ def like(post_id):
     if likesx is not None:
         for like in likesx:
             if like.user_id == user_id:
-                return jsonify(message="batty")
+                return jsonify(message="Post has been liked already.")
     added = Likes(user_id = user_id,post_id = post_id)
     db.session.add(added)
     db.session.commit()

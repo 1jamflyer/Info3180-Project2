@@ -1,4 +1,5 @@
-/* Add your Application JavaScript */
+
+
 Vue.component('app-header', {
     template: `
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary fixed-top">
@@ -18,12 +19,16 @@ Vue.component('app-header', {
             </li>
             <li v-if= "auth" class = "nav-item active">
                 <router-link class="nav-link" :to="{name: 'users', params: {user_id: cu_id}}">My Profile</router-link>
+            </li>
+              <li v-else class="nav-item active">
+                <router-link class="nav-link" to="/register">Register</router-link>
+            </li>
             <li v-if="auth" class="nav-item active">
                 <router-link class="nav-link" to="/logout">Logout</router-link>
             </li>
             <li v-else class="nav-item">
                 <router-link class="nav-link active" to="/login">Login</router-link>
-          </li>
+            </li>
         </ul>
       </div>
     </nav>
@@ -230,6 +235,7 @@ const Login = Vue.component('login', {
                 console.log(error);
             });
             
+            
         },
         data: function(){
             return {
@@ -253,7 +259,6 @@ const Logout = Vue.component("logout", {
     }).then(function(jsonResponse){
         localStorage.removeItem("current_user");
         router.push("/");
-        this.$router.push('/');
     }).catch(function(error){
         console.log(error);
     });
@@ -277,8 +282,8 @@ const Explore= Vue.component("explore", {
                         {{post.caption}}
                         <div class="row" style="margin-top: 10%">
                             <div id="likes" class="col-md-6" style="text-align: left;">
-                                <img class="like-ico liked" src="static/icons/liked.png"  v-on:click="like" style="width:20px; display: none;"/>
-                                <img class="like-ico like" src="static/icons/like.png"  v-on:click="like" style="width:20px;"/> {{post.likes}} Likes
+                                <img class="like-ico liked" src="static/images/liked.png"  v-on:click="like" style="width:20px; display: none;"/>
+                                <img class="like-ico like" src="static/images/like.png"  v-on:click="like" style="width:20px;"/> {{post.likes}} Likes
                                 <input type="hidden" id="post-id"  v-bind:value="post.id" />
                                 <input type="hidden" id="post-index" v-bind:value="index" />
                             </div>
@@ -344,11 +349,17 @@ const Explore= Vue.component("explore", {
         console.log(jsonResponse);
       }).then(function(jsonResponse){
           if(jsonResponse.hasOwnProperty("message")){
-              event.target.style.display="none"
-              event.target.previousElementSibling.style.display="";
-              self.posts[post_index].likes = jsonResponse.likes;
-              self.message = (jsonResponse.message)
-              alert(self.message)
+              if (jsonResponse.message=="Post liked"){
+                  event.target.style.display="none"
+                  event.target.previousElementSibling.style.display="";
+                  self.posts[post_index].likes = jsonResponse.likes;
+                  self.message = (jsonResponse.message);
+                  alert(self.message);
+              }
+              else{
+                  self.message = (jsonResponse.message)
+                  alert(self.message)
+              }
           
         }
           
@@ -503,7 +514,7 @@ const NewPost = Vue.component('newPost', {
            let uploadForm = document.getElementById('postContent');
            let form_data = new FormData(uploadForm);
            
-           fetch("/api/users/${JSON.parse(localStorage.current_user).id}/posts", {
+           fetch(`/api/users/${JSON.parse(localStorage.current_user).id}/posts`, {
             method: 'POST',
             body: form_data,
             headers: {
@@ -520,8 +531,9 @@ const NewPost = Vue.component('newPost', {
 
                 if (jsonResponse.hasOwnProperty("message")){
                     self.successful = jsonResponse.message;
+                }
+                else{
                     self.err = jsonResponse.errors;
-                    console.log(successful)
                 }
         })
         .catch(function (error) {

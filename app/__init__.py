@@ -8,8 +8,12 @@ app = Flask(__name__)
 csrf = CSRFProtect(app)
 
 UPLOAD_FOLDER='./static/uploads'
-PROFILE_PIC = './static/profilepic'
-POST_PIC = './static/posts'
+PROFILE_PIC = './app/static/profilepic'
+POST_PIC = './app/static/posts'
+POST_PICT= './static/posts'
+PROFILE_PICT = './static/posts/'
+app.config['PROFILE_PICT'] = PROFILE_PICT
+app.config['POST_PICT'] = POST_PICT
 app.config['PROFILE_PIC'] = PROFILE_PIC
 app.config['POST_PIC'] = POST_PIC
 app.config['SECRET_KEY'] = 'v\xf9\xf7\x11\x13\x18\xfaMYp\xed_\xe8\xc9w\x06\x8e\xf0f\xd2\xba\xfd\x8c\xda'
