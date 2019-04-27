@@ -50,7 +50,7 @@ def register():
             biography = form.biography.data
             photograph = request.files['file']
             filename = secure_filename(photograph.filename)
-            user_date = datetime.datetime.today().strftime('%Y-%m-%d')
+            user_date = datetime.date.today()
             photograph.save(os.path.join(app.config['PROFILE_PIC'], filename))
             user = UserProfile(username=username, password=password, first_name=firstname, last_name=lastname, email=email, location=location, biography=biography, photograph=filename, date_joined=user_date)
             db.session.add(user)
@@ -117,11 +117,14 @@ def singpost(user_id):
 @app.route('/api/users/<user_id>/follow', methods = ['POST'])
 def follow(user_id):
     requests = request.get_json()
-    result = Follows.query.filter_by(follower_id = requests['follower_id'],user_id = requests['user_id']).first()
-    if result is not None:
-        for follow in result:
-            if follow.user_id == user_id:
-                return jsonify(message="batty")
+    hold = requests['user_id']
+    holdx = requests['follower_id']
+    testfollowing = Follows.query.filter_by(follower_id=holdx).all()
+    if testfollowing is not None:
+        for f in testfollowing:
+            if f.user_id == hold:
+                return jsonify(message="Already Following")
+    
     follow = Follows(follower_id = requests['follower_id'], user_id = requests['user_id'])
     db.session.add(follow)
     db.session.commit()

@@ -20,8 +20,11 @@ Vue.component('app-header', {
             <li v-if= "auth" class = "nav-item active">
                 <router-link class="nav-link" :to="{name: 'users', params: {user_id: cu_id}}">My Profile</router-link>
             </li>
-              <li v-else class="nav-item active">
+            <li v-else class="nav-item active">
                 <router-link class="nav-link" to="/register">Register</router-link>
+            </li>
+            <li v-if="auth" class="nav-item active">
+                <router-link class="nav-link" to="/posts/new">Add Post</router-link>
             </li>
             <li v-if="auth" class="nav-item active">
                 <router-link class="nav-link" to="/logout">Logout</router-link>
@@ -143,23 +146,25 @@ const Register = Vue.component("register", {
                 return response.json();
             }).then(function (jsonResponse) {
                 console.log(jsonResponse);
+                if(jsonResponse.hasOwnProperty("message")){
+                    self.message = jsonResponse.message;
+                    alert(self.message);
+                    router.push('/login');
+                    window.location.reload();
+                }else 
+                if (jsonResponse.hasOwnProperty("errors")){
+                    self.message = jsonResponse.errors;
+                    alert(self.message);
+                    window.location.reload();
+                    
+                }
                 
-                  if (jsonResponse.hasOwnProperty("errors")){
-                      self.message = jsonResponse.errors;
-                      alert(self.message);
-                      
-                  }else if(jsonResponse.hasOwnProperty("message")){
-                      self.message = jsonResponse.message;
-                      alert(self.message);
-                      router.push('/')
-                  }
-                
-        });
+            });
         },
         onFileSelected: function(){
-            let self = this
+            let self = this;
             let filesname = $("#file")[0].value.split("\\");
-            self.filename = filesname[filesname.length-1]
+            self.filename = filesname[filesname.length-1];
             
         }
             
@@ -226,6 +231,7 @@ const Login = Vue.component('login', {
                     localStorage.current_user = JSON.stringify(cuser);
                     alert(jsonResponse.message)
                     router.push("/explore");
+                    window.location.reload();
                 }else{
                     self.message = jsonResponse.errors
                     alert(self.message)
@@ -259,6 +265,7 @@ const Logout = Vue.component("logout", {
     }).then(function(jsonResponse){
         localStorage.removeItem("current_user");
         router.push("/");
+        window.location.reload();
     }).catch(function(error){
         console.log(error);
     });
@@ -383,7 +390,7 @@ const Profile = Vue.component('profile',{
   <div>
     <div class="card row" style="width:100%">
         <div class="card-body row profile-haeder" style="padding: 0;" >
-          <img id="profile_image" class="col-md-2" v-bind:src=user.profile_pic style="width: 100%; height: 15%" />
+          <img id="profile_image" class="col-md-2" v-bind:src=user.profilepic style="width: 100%; height: 15%" />
           <div id="profile_info" class="col-md-7" style="margin-top: 0px;padding-right: 0;">
             <strong><label>{{ user.firstname }}</label>
             <label>{{ user.lastname }}</label></strong>
@@ -431,10 +438,16 @@ const Profile = Vue.component('profile',{
       .then(function(jsonResponse){
         
         if(jsonResponse.hasOwnProperty("message")){
-          $("#follow-btn")[0].innerHTML="Following";
-          $("#follow-btn").removeClass("btn-primary");
-          $("#follow-btn").addClass("btn-success")
-          ++ self.user.followers;
+            if(jsonResponse.message=='Already Following'){
+                alert(jsonResponse.message);
+            }
+            else{
+                $("#follow-btn")[0].innerHTML="Following";
+                $("#follow-btn").removeClass("btn-primary");
+                $("#follow-btn").addClass("btn-success")
+                ++ self.user.followers;
+                
+            }
         }
         
       }).catch(function(error){
